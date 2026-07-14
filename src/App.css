@@ -1,0 +1,1065 @@
+/* AgentWatch — Dark-Dashboard mit Ampel-Status */
+
+:root {
+  --bg: #0f1115;
+  --bg-elev: #171a21;
+  --bg-row: #1c2029;
+  --border: #262b36;
+  --text: #e6e9ef;
+  --text-dim: #9aa3b2;
+  --text-faint: #6b7280;
+
+  --working: #0a84ff;
+  --waiting: #ff9500;
+  --ready: #34c759;
+  --unknown: #8e8e93;
+
+  --ok: #34c759;
+  --warn: #ff9500;
+  --crit: #ff3b30;
+
+  /* Transparenter Rand rund um die Pill, damit aeussere Glows / Hover-Lift /
+     Aufklapp-Overshoot nicht am Fensterrand abgeschnitten werden. MUSS mit
+     ISLAND_BLEED in src-tauri/src/island.rs uebereinstimmen (dort 20.0). */
+  --bleed: 20px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Content-Einblendung beim Oeffnen des Dashboard-Flyouts (wird bei jedem
+   Fenster-Fokus per JS neu ausgeloest). Das Fenster selbst erscheint hart
+   (OS-Fenster sind kaum smooth animierbar) — der Inhalt blendet dafuer sanft ein. */
+.app-appear {
+  animation: appAppear 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+@keyframes appAppear {
+  from {
+    opacity: 0;
+    transform: translateY(7px) scale(0.992);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---- Header ---- */
+.header {
+  flex: 0 0 auto;
+  padding: 12px 14px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flame {
+  font-size: 16px;
+}
+
+.title {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.2px;
+}
+
+.demo-badge {
+  margin-left: auto;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--waiting);
+  border: 1px solid var(--waiting);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+
+.totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.pill-working {
+  color: var(--working);
+  border-color: color-mix(in srgb, var(--working) 45%, transparent);
+}
+.pill-waiting {
+  color: var(--waiting);
+  border-color: color-mix(in srgb, var(--waiting) 45%, transparent);
+}
+.pill-ready {
+  color: var(--ready);
+  border-color: color-mix(in srgb, var(--ready) 45%, transparent);
+}
+.pill-agents {
+  color: var(--text);
+}
+
+/* ---- Rate-Limit / Quota-Chips ---- */
+.quotas {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+}
+.quota-caption {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-faint);
+}
+.quota {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-row);
+}
+.quota-ok {
+  color: var(--ready);
+  border-color: color-mix(in srgb, var(--ready) 40%, transparent);
+}
+.quota-warn {
+  color: var(--waiting);
+  border-color: color-mix(in srgb, var(--waiting) 40%, transparent);
+}
+.quota-crit {
+  color: var(--crit);
+  border-color: color-mix(in srgb, var(--crit) 40%, transparent);
+}
+
+/* ---- Content ---- */
+.content {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px;
+}
+
+.content::-webkit-scrollbar {
+  width: 9px;
+}
+.content::-webkit-scrollbar-thumb {
+  background: #2c3240;
+  border-radius: 5px;
+}
+
+/* ---- Project group ---- */
+.group {
+  margin-bottom: 12px;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.group-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 11px;
+  border-bottom: 1px solid var(--border);
+}
+
+.group-name {
+  font-weight: 600;
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.group-count {
+  font-size: 11px;
+  color: var(--text-faint);
+}
+
+/* ---- Session row ---- */
+.session {
+  display: flex;
+  gap: 10px;
+  padding: 9px 11px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.session:first-of-type {
+  border-top: none;
+}
+
+.dot {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 4px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent);
+}
+.dot-working {
+  background: var(--working);
+  color: var(--working);
+  animation: breathe 1.6s ease-in-out infinite;
+}
+.dot-waiting {
+  background: var(--waiting);
+  color: var(--waiting);
+}
+.dot-ready {
+  background: var(--ready);
+  color: var(--ready);
+}
+.dot-unknown {
+  background: var(--unknown);
+  color: var(--unknown);
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.session-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.session-top {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.state-text {
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.branch,
+.model,
+.agents {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.model {
+  font-family: "Cascadia Code", "Consolas", monospace;
+  background: var(--bg-row);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
+
+.agents {
+  color: var(--working);
+  font-weight: 600;
+}
+
+.waiting-text {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--waiting) 12%, var(--bg-row));
+  border-left: 2px solid var(--waiting);
+  border-radius: 4px;
+  padding: 6px 8px;
+}
+
+.session-bottom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 7px;
+}
+
+.ctxbar {
+  position: relative;
+  flex: 1 1 auto;
+  height: 14px;
+  min-width: 60px;
+  background: var(--bg-row);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.ctxbar-fill {
+  height: 100%;
+  border-radius: 7px;
+  transition: width 0.3s ease;
+}
+.ctxbar-fill.ok {
+  background: var(--ok);
+}
+.ctxbar-fill.warn {
+  background: var(--warn);
+}
+.ctxbar-fill.crit {
+  background: var(--crit);
+}
+.ctxbar-label {
+  position: absolute;
+  top: 0;
+  left: 7px;
+  line-height: 14px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.6);
+}
+
+.tokens,
+.pid {
+  font-size: 11px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+
+/* ---- Subagent-Baum ---- */
+.agents {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font: inherit;
+}
+.agents:hover {
+  text-decoration: underline;
+}
+
+.subagents {
+  margin: 6px 0 2px 4px;
+  padding-left: 8px;
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.subagent {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+}
+.dot-sm {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.subagent-type {
+  color: var(--text);
+  font-family: "Cascadia Code", "Consolas", monospace;
+}
+.subagent-state {
+  color: var(--text-faint);
+  margin-left: auto;
+}
+
+/* ---- History-Timeline ---- */
+.histbar {
+  display: flex;
+  gap: 1px;
+  margin-top: 7px;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.histcell {
+  flex: 1 1 auto;
+  min-width: 2px;
+}
+.hist-working {
+  background: var(--working);
+}
+.hist-waiting {
+  background: var(--waiting);
+}
+.hist-ready {
+  background: var(--ready);
+}
+.hist-unknown {
+  background: var(--unknown);
+}
+
+/* ---- Empty / loading ---- */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-faint);
+  text-align: center;
+  gap: 6px;
+}
+.empty-flame {
+  font-size: 34px;
+  filter: grayscale(0.6);
+  opacity: 0.5;
+}
+.empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.empty-sub {
+  font-size: 12px;
+}
+
+.cost {
+  font-size: 11px;
+  color: var(--ready);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ---- Zahnrad / Header-Button ---- */
+.gear-btn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  line-height: 1;
+}
+.gear-btn:hover {
+  color: var(--text);
+  background: var(--bg-row);
+}
+
+/* ---- Settings ---- */
+.settings {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.settings-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: var(--bg-elev);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+}
+
+.back-btn {
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.back-btn:hover {
+  color: var(--text);
+}
+
+.settings-title {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.settings-section {
+  padding: 8px 14px 4px;
+}
+.settings-section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-faint);
+  margin: 10px 0 6px;
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  cursor: pointer;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+}
+.toggle-label {
+  flex: 1 1 auto;
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* Auswahl-Zeile (z.B. Monitor fuer die Pill) */
+.select-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+}
+.settings-select {
+  flex: 0 1 auto;
+  max-width: 60%;
+  background: var(--bg-row);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.settings-select:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--working) 55%, var(--border));
+}
+
+/* Versteckte Checkbox + custom Switch */
+.toggle-input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch {
+  flex: 0 0 auto;
+  position: relative;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  transition: background 0.2s ease;
+}
+.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.toggle-input:checked + .switch {
+  background: color-mix(in srgb, var(--working) 55%, transparent);
+  border-color: var(--working);
+}
+.toggle-input:checked + .switch::after {
+  transform: translateX(16px);
+  background: #fff;
+}
+.toggle-input:focus-visible + .switch {
+  outline: 2px solid var(--working);
+  outline-offset: 2px;
+}
+
+.settings-note {
+  margin: 14px;
+  padding: 10px 12px;
+  font-size: 11px;
+  color: var(--text-dim);
+  background: var(--bg-row);
+  border-radius: 8px;
+  line-height: 1.5;
+}
+.settings-note code {
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 10.5px;
+  color: var(--text);
+}
+
+/* ---- Dynamic Island (Pill oben am Bildschirm) ---- */
+/* Eigenes, transparentes Fenster: Hintergrund weg, Wurzel auf Pill-Groesse. */
+.island-body,
+.island-body #root {
+  background: transparent !important;
+  height: max-content;
+  width: max-content;
+  overflow: hidden;
+}
+
+/* Stage = transparenter Bleed-Rand rund um die Pill. Schafft Platz fuer aeussere
+   Glows, den Hover-Lift und den Aufklapp-Overshoot, die sonst am exakt
+   zugeschnittenen Fensterrand abgeschnitten wuerden. Wird vom Frontend gemessen. */
+.island-stage {
+  position: relative;
+  display: inline-flex;
+  padding: var(--bleed);
+  background: transparent;
+}
+
+/* Kontinuierliche Status-Aura hinter der Pill. Sitzt deckungsgleich auf der Pill
+   (inset = Bleed) und strahlt per box-shadow in den transparenten Bleed-Rand —
+   nicht vom overflow:hidden der Pill abgeschnitten, weil sie ein Geschwister IM
+   Stage ist. Farbe = --aura (Dominant-Klasse), pulsiert dauerhaft. */
+.island-glow {
+  position: absolute;
+  inset: var(--bleed);
+  border-radius: 18px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0;
+}
+.island-dom-working {
+  --aura: var(--working);
+}
+.island-dom-ready {
+  --aura: var(--ready);
+}
+.island-dom-waiting {
+  --aura: var(--waiting);
+}
+.island-dom-working .island-glow,
+.island-dom-ready .island-glow,
+.island-dom-waiting .island-glow {
+  animation: islandAura 2.6s ease-in-out infinite;
+}
+/* "wartet" pulsiert schneller + dringlicher. */
+.island-dom-waiting .island-glow {
+  animation-duration: 1.5s;
+}
+@keyframes islandAura {
+  0%,
+  100% {
+    opacity: 0.3;
+    box-shadow: 0 0 10px 0 color-mix(in srgb, var(--aura) 45%, transparent);
+  }
+  50% {
+    opacity: 0.9;
+    box-shadow: 0 0 18px 3px color-mix(in srgb, var(--aura) 70%, transparent);
+  }
+}
+
+.island {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  animation: islandDrop 460ms cubic-bezier(0.34, 1.56, 0.64, 1) 1;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 0 12px;
+  border-radius: 17px;
+  /* Deckend (kein Alpha): sonst scheint der Untergrund durch und die Farbe
+     wirkt je nach Pill-Groesse/Position unterschiedlich. */
+  background: var(--bg);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  /* Spring-Easing beim Aufklappen (min-width/padding) + sanfter Hover-Lift. */
+  transition:
+    min-width 320ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    padding-bottom 320ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 150ms ease,
+    background 150ms ease,
+    box-shadow 220ms ease;
+}
+.island:hover {
+  background: var(--bg-elev);
+  transform: translateY(-2px) scale(1.04);
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+.island:active {
+  transform: translateY(0) scale(0.985);
+}
+
+/* Auftritt: faellt mit kurzem Ueberschwingen von oben ein (Fenster-Reload/Start). */
+@keyframes islandDrop {
+  0% {
+    opacity: 0;
+    transform: translateY(-46px) scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Periodischer, dezenter Glanz-Streifen, der die Pill "lebendig" haelt, auch wenn
+   gerade nichts passiert. Eigenes Pseudo-Element (::before), damit es den
+   Ready-Blitz-Sweep (::after) nicht stoert. Laeuft alle paar Sekunden einmal. */
+.island::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    110deg,
+    transparent 38%,
+    rgba(255, 255, 255, 0.13) 50%,
+    transparent 62%
+  );
+  transform: translateX(-130%);
+  animation: islandIdleSheen 7s ease-in-out infinite;
+}
+@keyframes islandIdleSheen {
+  0%,
+  72% {
+    transform: translateX(-130%);
+  }
+  86%,
+  100% {
+    transform: translateX(130%);
+  }
+}
+/* Aufgeklappt (bei Ereignissen): spuerbar breiter + mehr Platz nach unten,
+   damit eine Benachrichtigung (fertig / wartet) sofort ins Auge faellt. */
+.island-expanded {
+  border-radius: 18px;
+  padding-bottom: 11px;
+  min-width: 260px;
+}
+
+/* Diagonaler Glanz-Sweep, der beim "gerade fertig"-Blitz einmal ueber die Pill
+   laeuft (der klassische Erledigt-Schimmer). Bleibt dank overflow:hidden drin. */
+.island::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    color-mix(in srgb, var(--ready) 55%, transparent) 50%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+}
+.island-flash-ready::after {
+  animation: islandShimmer 900ms ease-out 1;
+}
+@keyframes islandShimmer {
+  0% {
+    opacity: 0;
+    transform: translateX(-120%);
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(120%);
+  }
+}
+
+/* Obere Zeile: Glyph + Punkte + Zaehler — feste Hoehe ~ Titelleiste.
+   Zentriert, damit Icon/Punkte/Zahlen beim Aufklappen an Ort und Stelle
+   bleiben und die Pill nur den Rand symmetrisch nach aussen verbreitert. */
+.island-row {
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* Stichpunkte unter der Zeile: was gerade passiert ist. Ebenfalls zentriert,
+   damit das Aufklappen symmetrisch wirkt. */
+.island-events {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-top: 8px;
+  margin-top: 2px;
+  border-top: 1px solid var(--border);
+  /* Trenner + Bereich sanft einblenden, statt hart zu erscheinen. */
+  animation: islandEventsReveal 240ms ease-out 1;
+}
+@keyframes islandEventsReveal {
+  from {
+    opacity: 0;
+    border-top-color: transparent;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.island-event {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  /* Gestaffeltes Einfliegen (Stagger nach Position) — wie iOS-Notifications.
+     `backwards` haelt den Startzustand waehrend der Verzoegerung. */
+  animation: islandEventIn 280ms cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+/* Ausblenden, bevor der Eintrag aus dem DOM entfernt wird (JS: leavingAt).
+   Steht NACH .island-event, gewinnt also bei gleicher Spezifitaet. */
+.island-event-leaving {
+  animation: islandEventOut 280ms ease forwards;
+}
+@keyframes islandEventIn {
+  from {
+    opacity: 0;
+    transform: translateY(-7px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes islandEventOut {
+  from {
+    opacity: 1;
+    transform: none;
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+}
+/* Groessere Punkte in der aufgeklappten Ansicht (Signalwirkung). */
+.island-event .island-dot {
+  width: 11px;
+  height: 11px;
+}
+.island-event-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.island-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+/* Eine Spalte je Session: Statuspunkt oben, Agent-Anzahl direkt darunter. */
+.island-dotcol {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+/* Anzahl der Subagents dieser Session unter dem Punkt. 0 bleibt dezent gedimmt,
+   >0 wird heller hervorgehoben, damit aktive Agents sofort ins Auge fallen. */
+.island-dot-agents {
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+.island-dot-agents.has-agents {
+  color: var(--text-dim);
+}
+.island-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 22%, transparent);
+}
+/* Gestaffelte Verzoegerung (--i = Punkt-Index) erzeugt eine durchlaufende Welle
+   statt synchronem Gleichtakt. islandDotLive pulsiert Groesse + Helligkeit +
+   Schein-Ring — deutlich lebendiger als reines Ein-/Ausblenden. */
+.island-dot-working {
+  background: var(--working);
+  color: var(--working);
+  animation: islandDotLive 1.5s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.13s);
+}
+.island-dot-waiting {
+  background: var(--waiting);
+  color: var(--waiting);
+  animation: islandDotLive 0.95s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * 0.1s);
+}
+@keyframes islandDotLive {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.8);
+    box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 18%, transparent);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.18);
+    box-shadow:
+      0 0 0 2px color-mix(in srgb, currentColor 30%, transparent),
+      0 0 7px 1px color-mix(in srgb, currentColor 60%, transparent);
+  }
+}
+.island-dot-ready {
+  background: var(--ready);
+  color: var(--ready);
+}
+.island-dot-unknown {
+  background: var(--unknown);
+  color: var(--unknown);
+}
+
+.island-more {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.island-idle {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+/* Aufmerksamkeits-Animationen der Pill (statt Toast-Benachrichtigungen).
+   Dank des transparenten Bleed-Rands (--bleed) gibt es jetzt einen ECHTEN
+   aeusseren Glow zusaetzlich zum inneren Schein — deutlich edler als nur inset.
+   Der Basis-Schlagschatten (0 4px 16px) bleibt in jeder Keyframe erhalten, sonst
+   wuerde er waehrend der Animation verschwinden. "wartet" = persistenter oranger
+   Puls; "gerade fertig" = einmaliger gruener Blitz (island-flash-ready wird
+   zuletzt deklariert, hat also bei gleichzeitigem Auftreten Vorrang). */
+.island-attn-waiting {
+  animation: islandWaiting 1.5s ease-in-out infinite;
+}
+@keyframes islandWaiting {
+  0%,
+  100% {
+    border-color: rgba(255, 255, 255, 0.09);
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.5),
+      inset 0 0 0 0 transparent,
+      0 0 0 0 transparent;
+  }
+  50% {
+    border-color: color-mix(in srgb, var(--waiting) 85%, transparent);
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.5),
+      inset 0 0 11px 0 color-mix(in srgb, var(--waiting) 40%, transparent),
+      0 0 17px 2px color-mix(in srgb, var(--waiting) 60%, transparent);
+  }
+}
+.island-flash-ready {
+  animation: islandReadyFlash 2s ease-out 1;
+}
+@keyframes islandReadyFlash {
+  0% {
+    border-color: var(--ready);
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.5),
+      inset 0 0 13px 1px color-mix(in srgb, var(--ready) 50%, transparent),
+      0 0 18px 2px color-mix(in srgb, var(--ready) 65%, transparent);
+  }
+  100% {
+    border-color: rgba(255, 255, 255, 0.09);
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.5),
+      inset 0 0 0 0 transparent,
+      0 0 0 0 transparent;
+  }
+}
+
+/* ---- Bewegung reduzieren (Barrierefreiheit / Nutzerwunsch) ----
+   Wenn das System "reduzierte Bewegung" meldet, ersetzen wir die laufenden und
+   dekorativen Animationen durch ruhige, statische Endzustaende. Die Information
+   (Farbe/Status) bleibt vollstaendig erhalten — nur die Bewegung entfaellt. */
+@media (prefers-reduced-motion: reduce) {
+  /* Pulsierende/atmende Dauer-Animationen abschalten (Pill + Dashboard). */
+  .island-dot-working,
+  .island-dot-waiting,
+  .dot-working {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  /* Dauer-Effekte (Aura, Flammen-Flackern, Idle-Glanz, Auftritt) abschalten;
+     die Status-Aura bleibt als ruhiger, statischer Schein erhalten. */
+  .island {
+    animation: none;
+  }
+  .island::before {
+    display: none;
+  }
+  .island-dom-working .island-glow,
+  .island-dom-ready .island-glow,
+  .island-dom-waiting .island-glow {
+    animation: none;
+    opacity: 0.5;
+    box-shadow: 0 0 12px 1px color-mix(in srgb, var(--aura) 50%, transparent);
+  }
+  /* "wartet" nicht pulsieren lassen, aber als ruhiger oranger Rand markieren. */
+  .island-attn-waiting {
+    animation: none;
+    border-color: color-mix(in srgb, var(--waiting) 85%, transparent);
+  }
+  /* Einmalige Effekte (Blitz, Schimmer, Pop, Ein-/Ausblenden) sofort statisch. */
+  .island-flash-ready,
+  .island-event,
+  .island-events,
+  .app-appear {
+    animation: none;
+  }
+  .island::after {
+    display: none;
+  }
+  .island {
+    transition: background 150ms ease;
+  }
+  .island:hover {
+    transform: none;
+  }
+  .island-event-leaving {
+    animation: none;
+    opacity: 0;
+  }
+  .ctxbar-fill {
+    transition: none;
+  }
+}
