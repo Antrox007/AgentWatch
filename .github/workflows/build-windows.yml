@@ -42,3 +42,21 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
             src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
           if-no-files-found: error
+
+      - name: Locate NSIS installer
+        id: locate
+        shell: bash
+        run: |
+          exe=$(ls src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe)
+          echo "exe_path=$exe" >> "$GITHUB_OUTPUT"
+
+      - name: Publish installer to Vercel Blob
+        shell: bash
+        env:
+          BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
+        run: |
+          npx --yes vercel@latest blob put "${{ steps.locate.outputs.exe_path }}" \
+            --rw-token "$BLOB_READ_WRITE_TOKEN" \
+            --access public \
+            --pathname "installers/AgentWatch-${{ matrix.arch }}-setup.exe" \
+            --allow-overwrite
