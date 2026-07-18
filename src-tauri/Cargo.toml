@@ -3,6 +3,7 @@ name = "agentwatch"
 version = "0.1.0"
 description = "AgentWatch - Live-Monitor fuer aktive Claude-Code-Sessions"
 authors = ["AgentWatch"]
+license = "MIT"
 edition = "2021"
 
 [lib]
