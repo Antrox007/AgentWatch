@@ -55,8 +55,9 @@ jobs:
         env:
           BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
         run: |
-          npx --yes vercel@latest blob put "${{ steps.locate.outputs.exe_path }}" \
-            --rw-token "$BLOB_READ_WRITE_TOKEN" \
-            --access public \
-            --pathname "installers/AgentWatch-${{ matrix.arch }}-setup.exe" \
-            --allow-overwrite
+          curl -sf -X PUT "https://blob.vercel-storage.com/installers/AgentWatch-${{ matrix.arch }}-setup.exe" \
+            -H "Authorization: Bearer $BLOB_READ_WRITE_TOKEN" \
+            -H "x-api-version: 7" \
+            -H "x-content-type: application/octet-stream" \
+            -H "x-add-random-suffix: 0" \
+            --data-binary @"${{ steps.locate.outputs.exe_path }}"
