@@ -251,6 +251,11 @@ body {
   color: var(--unknown);
 }
 
+.status-dot-dashboard {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
 @keyframes breathe {
   0%,
   100% {
@@ -258,6 +263,48 @@ body {
   }
   50% {
     opacity: 1;
+  }
+}
+
+/* Status-Icons (Zahnrad/Haekchen/Ausrufezeichen) statt reiner Punkte. */
+@keyframes icon-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes icon-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes apple-pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes apple-nudge {
+  0%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+  90% {
+    transform: translateY(-1.5px);
   }
 }
 
@@ -884,6 +931,12 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 7px;
+}
+/* Wrapper fuer die Status-Icons in der Pill — bewusst ohne feste
+   Breite/Hoehe/Radius (im Unterschied zu .island-dot), da die Groesse
+   direkt am SVG haengt. */
+.island-status-icon {
+  display: inline-flex;
 }
 /* Eine Spalte je Session: Statuspunkt oben, Agent-Anzahl direkt darunter. */
 .island-dotcol {

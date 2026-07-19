@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import { getSnapshot, onSnapshot, positionIsland, toggleDashboardTop } from "./api";
 import type { SessionInfo, SessionState, Snapshot } from "./types";
 import type { UnlistenFn } from "@tauri-apps/api/event";
+import { StatusIcon } from "./StatusIcon";
 import "./App.css";
 
 // Maximale Anzahl einzelner Punkte, bevor auf "+N" zusammengefasst wird.
@@ -238,9 +239,11 @@ export default function Island() {
                 // Spalte je Session: Statuspunkt oben, Anzahl der Subagents dieser
                 // Session direkt darunter (0 = gedimmt, >0 = hervorgehoben).
                 <span className="island-dotcol" key={i}>
-                  <span
-                    className={`island-dot island-dot-${d.state}`}
-                    style={{ "--i": i } as CSSProperties}
+                  <StatusIcon
+                    state={d.state}
+                    size={11}
+                    className="island-status-icon"
+                    unknownClassName="island-dot island-dot-unknown"
                   />
                   <span
                     className={`island-dot-agents${d.agents > 0 ? " has-agents" : ""}`}
@@ -261,7 +264,12 @@ export default function Island() {
                 key={e.key}
                 style={{ "--i": i } as CSSProperties}
               >
-                <span className={`island-dot island-dot-${e.kind}`} />
+                <StatusIcon
+                  state={e.kind}
+                  size={13}
+                  className="island-status-icon"
+                  unknownClassName="island-dot island-dot-unknown"
+                />
                 <span className="island-event-label">{e.label}</span>
               </div>
             ))}

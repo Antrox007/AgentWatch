@@ -13,6 +13,8 @@ import {
 } from "./types";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { fmtTokens, fmtCost, shortModel } from "./format";
+import { StatusIcon } from "./StatusIcon";
+import { Logo } from "./Logo";
 import "./App.css";
 
 const STATE_LABEL: Record<SessionState, string> = {
@@ -133,7 +135,15 @@ const DEMO: Snapshot = {
 };
 
 function StatusDot({ state }: { state: SessionState }) {
-  return <span className={`dot dot-${state}`} title={STATE_LABEL[state]} />;
+  return (
+    <StatusIcon
+      state={state}
+      size={14}
+      title={STATE_LABEL[state]}
+      className="status-dot-dashboard"
+      unknownClassName="dot dot-unknown status-dot-dashboard"
+    />
+  );
 }
 
 function ContextBar({ session }: { session: SessionInfo }) {
@@ -389,7 +399,7 @@ export default function App() {
     <div className={`app${appear ? " app-appear" : ""}`}>
       <header className="header">
         <div className="brand">
-          <span className="flame">🔥</span>
+          <Logo size={17} className="flame" />
           <span className="title">AgentWatch</span>
           {demo && <span className="demo-badge">Demo</span>}
           <button
@@ -415,7 +425,7 @@ export default function App() {
         {!snapshot && <div className="empty">Lade …</div>}
         {snapshot && snapshot.projects.length === 0 && (
           <div className="empty">
-            <div className="empty-flame">🔥</div>
+            <Logo size={34} className="empty-flame" glow={false} />
             <div className="empty-title">Keine aktiven Sessions</div>
             <div className="empty-sub">
               Starte eine Claude-Code-Session, um sie hier zu sehen.
