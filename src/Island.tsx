@@ -62,11 +62,27 @@ export default function Island() {
   const [flashReady, setFlashReady] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const prevStates = useRef<Map<string, SessionState>>(new Map());
+  // Zeitstempel (Backend-`generatedAt`) des zuletzt uebernommenen Snapshots.
+  // Push-Events (ueber den gedrosselten Tauri-Event-Kanal, siehe Heartbeat-
+  // Kommentar unten) und der ungedrosselte Poll laufen als zwei unabhaengige
+  // Kanaele nebeneinander her und koennen daher in falscher Reihenfolge
+  // eintreffen: ein aelterer, aber verspaeteter Push kann kurzzeitig einen
+  // bereits ueberholten Zustand zurueckschreiben. Die darunterliegende
+  // Uebergangserkennung wuerde denselben Wechsel (z.B. "fertig") dann ein
+  // zweites Mal melden. Guard: nur echt neuere Snapshots uebernehmen.
+  const lastGeneratedAt = useRef(0);
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
+
+    const applySnapshot = (snap: Snapshot) => {
+      if (snap.generatedAt < lastGeneratedAt.current) return;
+      lastGeneratedAt.current = snap.generatedAt;
+      setSnapshot(snap);
+    };
+
     getSnapshot()
-      .then(setSnapshot)
+      .then(applySnapshot)
       .catch(() => {
         // Browser-Vorschau: Demo-Daten inkl. zwei Beispiel-Ereignissen (Pill aufgeklappt).
         setDemo(true);
@@ -80,7 +96,7 @@ export default function Island() {
           },
         ]);
       });
-    onSnapshot(setSnapshot)
+    onSnapshot(applySnapshot)
       .then((fn) => (unlisten = fn))
       .catch(() => {});
 
@@ -89,7 +105,7 @@ export default function Island() {
     const poll = setInterval(() => {
       getSnapshot()
         .then((snap) => {
-          setSnapshot(snap);
+          applySnapshot(snap);
           setDemo(false);
         })
         .catch(() => {});
