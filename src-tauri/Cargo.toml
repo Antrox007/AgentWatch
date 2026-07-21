@@ -1,6 +1,6 @@
 [package]
 name = "agentwatch"
-version = "0.2.2"
+version = "0.3.0"
 description = "AgentWatch - Live-Monitor fuer aktive Claude-Code-Sessions"
 authors = ["AgentWatch"]
 license = "MIT"
