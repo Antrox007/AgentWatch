@@ -578,6 +578,29 @@ body {
   transition: width 160ms ease;
 }
 
+/* Variante fuer die Einbettung als Karte in den Einstellungen (statt
+   randloser Header-Strip): abgerundet statt Border-Bottom. */
+.update-banner-boxed {
+  border-bottom: none;
+  border-radius: 8px;
+  margin: 2px 0 10px;
+}
+
+.check-updates-btn {
+  background: var(--bg-row);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 2px 0 8px;
+}
+.check-updates-btn:hover {
+  background: var(--bg-elev);
+}
+
 /* ---- Zahnrad / Header-Button ---- */
 .gear-btn {
   margin-left: auto;

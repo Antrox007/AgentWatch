@@ -310,7 +310,17 @@ export default function App() {
   // wird (und bei Fokusverlust verschwindet). So spielt die Einblendung bei jedem
   // Oeffnen erneut ab, obwohl der React-Baum erhalten bleibt.
   const [appear, setAppear] = useState(true);
-  const { state: updateState, install: installUpdate, dismiss: dismissUpdate } = useUpdater();
+  // Erst wenn die persistierten Einstellungen wirklich geladen sind, darf der
+  // Auto-Update-Check anhand von settings.autoUpdateCheck entscheiden — sonst
+  // koennte der Default (true) kurzzeitig einen Check ausloesen, obwohl der
+  // Nutzer ihn deaktiviert hat.
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const {
+    state: updateState,
+    install: installUpdate,
+    dismiss: dismissUpdate,
+    checkNow: checkForUpdates,
+  } = useUpdater(settingsLoaded && settings.autoUpdateCheck);
 
   useEffect(() => {
     let cancelled = false;
@@ -350,7 +360,10 @@ export default function App() {
       .then((s) => {
         if (!cancelled) setSettings(s);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setSettingsLoaded(true);
+      });
 
     return () => {
       cancelled = true;
@@ -393,6 +406,10 @@ export default function App() {
           settings={settings}
           onChange={handleSettingsChange}
           onClose={() => setView("dashboard")}
+          updateState={updateState}
+          onCheckForUpdates={checkForUpdates}
+          onInstallUpdate={installUpdate}
+          onDismissUpdate={dismissUpdate}
         />
       </div>
     );

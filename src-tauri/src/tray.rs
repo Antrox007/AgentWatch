@@ -1,9 +1,16 @@
-//! Aktualisiert Tray-Tooltip und ein dynamisch gezeichnetes Status-Icon
-//! (Ampelfarbe nach Prioritaet: wartet > arbeitet > bereit > keine).
+//! Aktualisiert Tray-Tooltip und Status-Icon (Ampelfarbe/-glyph nach
+//! Prioritaet: wartet > arbeitet > bereit > keine). Die Glyphen (Zahnrad /
+//! Haekchen / Ausrufezeichen) sind dieselben wie in der Pill (`StatusIcon.tsx`)
+//! — als PNG vorgerendert, damit Tray und Pill optisch einheitlich wirken statt
+//! nur ein schlichter Farbpunkt im Tray.
 
 use crate::model::{Snapshot, Totals};
 use tauri::image::Image;
 use tauri::AppHandle;
+
+const WORKING_ICON: Image<'static> = tauri::include_image!("icons/tray-working.png");
+const WAITING_ICON: Image<'static> = tauri::include_image!("icons/tray-waiting.png");
+const READY_ICON: Image<'static> = tauri::include_image!("icons/tray-ready.png");
 
 pub fn update_tray(app: &AppHandle, snapshot: &Snapshot) {
     let t = &snapshot.totals;
@@ -11,7 +18,7 @@ pub fn update_tray(app: &AppHandle, snapshot: &Snapshot) {
         "AgentWatch — {} Sessions ({} aktiv, {} warten, {} fertig) · {} Agents",
         t.sessions, t.working, t.waiting, t.ready, t.agents
     );
-    let icon = build_status_icon(t);
+    let icon = status_icon(t);
 
     // Tray-Operationen sicherheitshalber auf dem Main-Thread ausfuehren.
     let app_handle = app.clone();
@@ -23,18 +30,24 @@ pub fn update_tray(app: &AppHandle, snapshot: &Snapshot) {
     });
 }
 
-/// Zeichnet einen gefuellten, weich umrandeten Kreis in der dominanten Statusfarbe.
-fn build_status_icon(totals: &Totals) -> Image<'static> {
-    let size: u32 = 32;
-    let (r, g, b) = if totals.waiting > 0 {
-        (255u8, 149u8, 0u8) // orange: wartet auf Eingabe (hoechste Prioritaet)
+/// Waehlt die zur dominanten Statusfarbe passende Glyphe (Pill-Pendant); ohne
+/// aktive Sessions bleibt es beim schlichten grauen Punkt (kein Pill-Aequivalent).
+fn status_icon(totals: &Totals) -> Image<'static> {
+    if totals.waiting > 0 {
+        WAITING_ICON
     } else if totals.working > 0 {
-        (10, 132, 255) // blau: arbeitet
+        WORKING_ICON
     } else if totals.ready > 0 {
-        (52, 199, 89) // gruen: bereit
+        READY_ICON
     } else {
-        (142, 142, 147) // grau: keine Sessions
-    };
+        build_none_icon()
+    }
+}
+
+/// Zeichnet einen gefuellten, weich umrandeten grauen Kreis fuer "keine Sessions".
+fn build_none_icon() -> Image<'static> {
+    let size: u32 = 32;
+    let (r, g, b) = (142u8, 142u8, 147u8);
 
     let mut buf = vec![0u8; (size * size * 4) as usize];
     let center = size as f32 / 2.0 - 0.5;

@@ -73,6 +73,7 @@ export interface AppSettings {
   statuslineIntegration: boolean;
   islandEnabled: boolean;
   islandMonitor: string | null;
+  autoUpdateCheck: boolean;
 }
 
 /** Ein Monitor zur Auswahl der Pill-Position. */
@@ -95,4 +96,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   statuslineIntegration: false,
   islandEnabled: true,
   islandMonitor: null,
+  autoUpdateCheck: true,
 };

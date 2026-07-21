@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { listMonitors } from "./api";
 import type { AppSettings, MonitorInfo } from "./types";
+import { UpdateBanner } from "./UpdateBanner";
+import type { UpdaterState } from "./useUpdater";
 
 type ToggleKey = keyof Pick<
   AppSettings,
@@ -11,6 +13,7 @@ type ToggleKey = keyof Pick<
   | "soundEnabled"
   | "showCost"
   | "autostart"
+  | "autoUpdateCheck"
 >;
 
 const NOTIFY_TOGGLES: { key: ToggleKey; label: string }[] = [
@@ -53,10 +56,18 @@ export default function SettingsPanel({
   settings,
   onChange,
   onClose,
+  updateState,
+  onCheckForUpdates,
+  onInstallUpdate,
+  onDismissUpdate,
 }: {
   settings: AppSettings;
   onChange: (next: AppSettings) => void;
   onClose: () => void;
+  updateState: UpdaterState;
+  onCheckForUpdates: () => void;
+  onInstallUpdate: () => void;
+  onDismissUpdate: () => void;
 }) {
   const toggle = (key: ToggleKey) =>
     onChange({ ...settings, [key]: !settings[key] });
@@ -137,6 +148,26 @@ export default function SettingsPanel({
           Sessions (ein Punkt je Session, plus Zähler). Klick auf die Pill öffnet
           das Hauptfenster.
         </div>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">Updates</div>
+        <ToggleRow
+          label="Automatisch beim Start nach Updates suchen"
+          checked={settings.autoUpdateCheck}
+          onToggle={() =>
+            onChange({ ...settings, autoUpdateCheck: !settings.autoUpdateCheck })
+          }
+        />
+        <button className="check-updates-btn" onClick={onCheckForUpdates}>
+          Jetzt nach Updates suchen
+        </button>
+        <UpdateBanner
+          state={updateState}
+          onInstall={onInstallUpdate}
+          onDismiss={onDismissUpdate}
+          className="update-banner-boxed"
+        />
       </div>
 
       <div className="settings-section">

@@ -25,6 +25,9 @@ pub struct AppSettings {
     /// Monitor-Name fuer die Pill (z.B. "\\\\.\\DISPLAY1"); None/leer = Primaermonitor.
     #[serde(default)]
     pub island_monitor: Option<String>,
+    /// Beim Start automatisch auf eine neue Version pruefen (Updater-Plugin).
+    #[serde(default = "default_true")]
+    pub auto_update_check: bool,
 }
 
 fn default_true() -> bool {
@@ -46,6 +49,7 @@ impl Default for AppSettings {
             statusline_integration: false,
             island_enabled: true,
             island_monitor: None,
+            auto_update_check: true,
         }
     }
 }

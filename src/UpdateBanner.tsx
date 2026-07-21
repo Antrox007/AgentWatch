@@ -4,15 +4,26 @@ export function UpdateBanner({
   state,
   onInstall,
   onDismiss,
+  className,
 }: {
   state: UpdaterState;
   onInstall: () => void;
   onDismiss: () => void;
+  /** Zusaetzliche Klasse fuer den Kontext (z.B. Settings-Karte statt Header-Strip). */
+  className?: string;
 }) {
-  if (state.phase === "idle" || state.phase === "checking") return null;
+  if (state.phase === "idle") return null;
 
   return (
-    <div className="update-banner">
+    <div className={`update-banner${className ? ` ${className}` : ""}`}>
+      {state.phase === "checking" && (
+        <span className="update-text">Suche nach Updates …</span>
+      )}
+
+      {state.phase === "up-to-date" && (
+        <span className="update-text">Du bist auf dem neuesten Stand</span>
+      )}
+
       {state.phase === "available" && (
         <>
           <span className="update-text">
