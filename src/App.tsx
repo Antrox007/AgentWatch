@@ -15,6 +15,8 @@ import type { UnlistenFn } from "@tauri-apps/api/event";
 import { fmtTokens, fmtCost, shortModel } from "./format";
 import { StatusIcon } from "./StatusIcon";
 import { Logo } from "./Logo";
+import { UpdateBanner } from "./UpdateBanner";
+import { useUpdater } from "./useUpdater";
 import "./App.css";
 
 const STATE_LABEL: Record<SessionState, string> = {
@@ -308,6 +310,7 @@ export default function App() {
   // wird (und bei Fokusverlust verschwindet). So spielt die Einblendung bei jedem
   // Oeffnen erneut ab, obwohl der React-Baum erhalten bleibt.
   const [appear, setAppear] = useState(true);
+  const { state: updateState, install: installUpdate, dismiss: dismissUpdate } = useUpdater();
 
   useEffect(() => {
     let cancelled = false;
@@ -420,6 +423,8 @@ export default function App() {
         )}
         {snapshot?.rateLimits && <RateLimitChips limits={snapshot.rateLimits} />}
       </header>
+
+      <UpdateBanner state={updateState} onInstall={installUpdate} onDismiss={dismissUpdate} />
 
       <main className="content">
         {!snapshot && <div className="empty">Lade …</div>}

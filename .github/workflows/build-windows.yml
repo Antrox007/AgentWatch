@@ -32,22 +32,33 @@ jobs:
         run: npm install
 
       - name: Build installer (${{ matrix.arch }})
-        run: npm run tauri build -- --target ${{ matrix.target }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: |
+          npm run tauri build -- --target ${{ matrix.target }} --config '{"bundle":{"createUpdaterArtifacts":true}}'
 
-      - name: Rename installer to stable asset name
+      - name: Collect installer + updater signature
         id: locate
         shell: bash
         run: |
-          exe=$(ls src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe)
+          set -euo pipefail
+          bundle_dir="src-tauri/target/${{ matrix.target }}/release/bundle/nsis"
+          exe=$(ls "$bundle_dir"/*.exe)
+          sig=$(ls "$bundle_dir"/*.sig)
           dest="AgentWatch-${{ matrix.arch }}-setup.exe"
           cp "$exe" "$dest"
+          cp "$sig" "$dest.sig"
           echo "asset_path=$dest" >> "$GITHUB_OUTPUT"
+          echo "sig_path=$dest.sig" >> "$GITHUB_OUTPUT"
 
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
           name: agentwatch-${{ matrix.arch }}
-          path: ${{ steps.locate.outputs.asset_path }}
+          path: |
+            ${{ steps.locate.outputs.asset_path }}
+            ${{ steps.locate.outputs.sig_path }}
           if-no-files-found: error
 
   release:
@@ -61,12 +72,44 @@ jobs:
         with:
           path: artifacts
 
+      - name: Build updater manifest (latest.json)
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ github.ref_name }}"
+          version="${tag#v}"
+          repo="${{ github.repository }}"
+          pub_date="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          x64_sig="$(cat artifacts/agentwatch-x64/AgentWatch-x64-setup.exe.sig)"
+          arm64_sig="$(cat artifacts/agentwatch-arm64/AgentWatch-arm64-setup.exe.sig)"
+          jq -n \
+            --arg version "$version" \
+            --arg notes "https://github.com/$repo/releases/tag/$tag" \
+            --arg pub_date "$pub_date" \
+            --arg x64_url "https://github.com/$repo/releases/download/$tag/AgentWatch-x64-setup.exe" \
+            --arg x64_sig "$x64_sig" \
+            --arg arm64_url "https://github.com/$repo/releases/download/$tag/AgentWatch-arm64-setup.exe" \
+            --arg arm64_sig "$arm64_sig" \
+            '{
+              version: $version,
+              notes: $notes,
+              pub_date: $pub_date,
+              platforms: {
+                "windows-x86_64": { signature: $x64_sig, url: $x64_url },
+                "windows-aarch64": { signature: $arm64_sig, url: $arm64_url }
+              }
+            }' > latest.json
+
       - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${{ github.ref_name }}"
-          assets=(artifacts/agentwatch-x64/AgentWatch-x64-setup.exe artifacts/agentwatch-arm64/AgentWatch-arm64-setup.exe)
+          assets=(
+            artifacts/agentwatch-x64/AgentWatch-x64-setup.exe
+            artifacts/agentwatch-arm64/AgentWatch-arm64-setup.exe
+            latest.json
+          )
           if gh release view "$tag" --repo "${{ github.repository }}" >/dev/null 2>&1; then
             gh release upload "$tag" "${assets[@]}" --repo "${{ github.repository }}" --clobber
           else

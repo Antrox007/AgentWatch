@@ -505,6 +505,79 @@ body {
   white-space: nowrap;
 }
 
+/* ---- Update-Banner ---- */
+.update-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--bg-row);
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.update-text {
+  color: var(--text-dim);
+  flex: 1;
+  min-width: 0;
+}
+.update-text strong {
+  color: var(--text);
+}
+.update-text-error {
+  color: var(--crit);
+}
+
+.update-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.update-btn {
+  background: var(--working);
+  border: none;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.update-btn:hover {
+  filter: brightness(1.1);
+}
+
+.update-dismiss {
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  line-height: 1;
+}
+.update-dismiss:hover {
+  color: var(--text);
+  background: var(--bg-elev);
+}
+
+.update-progress {
+  flex: 1;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bg-elev);
+  overflow: hidden;
+}
+.update-progress-fill {
+  height: 100%;
+  background: var(--ready);
+  transition: width 160ms ease;
+}
+
 /* ---- Zahnrad / Header-Button ---- */
 .gear-btn {
   margin-left: auto;
