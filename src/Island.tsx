@@ -215,19 +215,6 @@ export default function Island() {
   // Zahl breiter als der Punkt) — als Signal fuer die Groessenmessung mitfuehren.
   const agentsKey = dots.map((d) => d.agents).join(",");
 
-  // Nach jedem Render die gemessene Groesse (Breite x Hoehe) ans Backend melden,
-  // damit das Fenster exakt darauf zugeschnitten + oben zentriert wird. Gemessen
-  // wird der Stage-Wrapper INKL. transparentem Bleed-Rand (CSS `--bleed`), damit
-  // aeussere Glows / Hover-Lift / Aufklapp-Overshoot Platz haben und nicht am
-  // Fensterrand abgeschnitten werden.
-  useLayoutEffect(() => {
-    if (!ref.current) return;
-    const rect = ref.current.getBoundingClientRect();
-    if (rect.width > 0 && rect.height > 0) {
-      positionIsland(Math.ceil(rect.width), Math.ceil(rect.height)).catch(() => {});
-    }
-  }, [dots.length, working, waiting, ready, more, agentsKey, events]);
-
   // Dominanter Status faerbt die kontinuierliche Aura (auch ohne Ereignis):
   // wartet (dringend) > arbeitet > bereit. Ohne Sessions: keine Aura.
   const dominant =
@@ -238,6 +225,17 @@ export default function Island() {
   const rl7 = rateLimits?.sevenDayPct ?? null;
   const rlLevel = (pct: number) =>
     pct >= 90 ? "island-rl-crit" : pct >= 70 ? "island-rl-warn" : "island-rl-ok";
+
+  // Nach jedem Render die gemessene Groesse ans Backend melden, damit das Fenster
+  // exakt auf den Inhalt zugeschnitten + oben zentriert wird. Alle Werte, die die
+  // Pill-Groesse beeinflussen koennen, muessen hier als Dependency stehen.
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      positionIsland(Math.ceil(rect.width), Math.ceil(rect.height)).catch(() => {});
+    }
+  }, [dots.length, working, waiting, ready, more, agentsKey, events, rl5, rl7, settings.islandShowRateLimits, settings.islandShowEvents]);
 
   const stageClass = ["island-stage", dominant ? `island-dom-${dominant}` : ""]
     .filter(Boolean)
