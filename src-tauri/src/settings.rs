@@ -28,6 +28,12 @@ pub struct AppSettings {
     /// Beim Start automatisch auf eine neue Version pruefen (Updater-Plugin).
     #[serde(default = "default_true")]
     pub auto_update_check: bool,
+    /// Pill klappt bei fertig/wartet-Ereignissen auf und zeigt einen Texthinweis.
+    #[serde(default = "default_true")]
+    pub island_show_events: bool,
+    /// Rate-Limits (5h/7d) dauerhaft rechts in der Pill anzeigen.
+    #[serde(default)]
+    pub island_show_rate_limits: bool,
 }
 
 fn default_true() -> bool {
@@ -50,6 +56,8 @@ impl Default for AppSettings {
             island_enabled: true,
             island_monitor: None,
             auto_update_check: true,
+            island_show_events: true,
+            island_show_rate_limits: false,
         }
     }
 }

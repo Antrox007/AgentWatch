@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
-import { getSnapshot, onSnapshot, positionIsland, toggleDashboardTop } from "./api";
-import type { SessionInfo, SessionState, Snapshot } from "./types";
+import { getSettings, onSettingsUpdated, getSnapshot, onSnapshot, positionIsland, toggleDashboardTop } from "./api";
+import type { AppSettings, SessionInfo, SessionState, Snapshot } from "./types";
+import { DEFAULT_SETTINGS } from "./types";
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { StatusIcon } from "./StatusIcon";
 import "./App.css";
@@ -59,6 +60,7 @@ export default function Island() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [demo, setDemo] = useState(false);
   const [events, setEvents] = useState<IslandEvent[]>([]);
+  const [settings, setSettings] = useState<AppSettings>(DEFAULT_SETTINGS);
   const [flashReady, setFlashReady] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const prevStates = useRef<Map<string, SessionState>>(new Map());
@@ -71,6 +73,16 @@ export default function Island() {
   // Uebergangserkennung wuerde denselben Wechsel (z.B. "fertig") dann ein
   // zweites Mal melden. Guard: nur echt neuere Snapshots uebernehmen.
   const lastGeneratedAt = useRef(0);
+
+  // Einstellungen laden und auf Änderungen reagieren (z.B. aus dem Hauptfenster).
+  useEffect(() => {
+    let unlistenSettings: UnlistenFn | undefined;
+    getSettings().then(setSettings).catch(() => {});
+    onSettingsUpdated(setSettings)
+      .then((fn) => (unlistenSettings = fn))
+      .catch(() => {});
+    return () => unlistenSettings?.();
+  }, []);
 
   useEffect(() => {
     let unlisten: UnlistenFn | undefined;
@@ -119,7 +131,7 @@ export default function Island() {
 
   // Zustandswechsel erkennen -> Ereignis-Stichpunkte (fertig/wartet) + gruener Blitz.
   useEffect(() => {
-    if (demo) return;
+    if (demo || !settings.islandShowEvents) return;
     const sess = flattenSessions(snapshot);
     const fresh: { kind: "ready" | "waiting"; label: string }[] = [];
     let newlyReady = false;
@@ -221,6 +233,12 @@ export default function Island() {
   const dominant =
     waiting > 0 ? "waiting" : working > 0 ? "working" : ready > 0 ? "ready" : null;
 
+  const rateLimits = settings.islandShowRateLimits ? snapshot?.rateLimits : null;
+  const rl5 = rateLimits?.fiveHourPct ?? null;
+  const rl7 = rateLimits?.sevenDayPct ?? null;
+  const rlLevel = (pct: number) =>
+    pct >= 90 ? "island-rl-crit" : pct >= 70 ? "island-rl-warn" : "island-rl-ok";
+
   const stageClass = ["island-stage", dominant ? `island-dom-${dominant}` : ""]
     .filter(Boolean)
     .join(" ");
@@ -252,8 +270,6 @@ export default function Island() {
           ) : (
             <span className="island-dots">
               {shown.map((d, i) => (
-                // Spalte je Session: Statuspunkt oben, Anzahl der Subagents dieser
-                // Session direkt darunter (0 = gedimmt, >0 = hervorgehoben).
                 <span className="island-dotcol" key={i}>
                   <StatusIcon
                     state={d.state}
@@ -269,6 +285,20 @@ export default function Island() {
                 </span>
               ))}
               {more > 0 && <span className="island-more">+{more}</span>}
+            </span>
+          )}
+          {(rl5 != null || rl7 != null) && (
+            <span className="island-rate-limits">
+              {rl5 != null && (
+                <span className={`island-rl ${rlLevel(rl5)}`} title="5h-Limit">
+                  {Math.round(rl5)}%
+                </span>
+              )}
+              {rl7 != null && (
+                <span className={`island-rl ${rlLevel(rl7)}`} title="7d-Limit">
+                  {Math.round(rl7)}%
+                </span>
+              )}
             </span>
           )}
         </div>

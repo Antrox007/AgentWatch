@@ -4,7 +4,7 @@ use crate::aggregator;
 use crate::model::Snapshot;
 use crate::settings::{self, AppSettings, SettingsState};
 use serde::Serialize;
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 use tauri_plugin_autostart::ManagerExt;
 
 /// Ein Monitor zur Auswahl in den Einstellungen (fuer die Island-Position).
@@ -132,8 +132,9 @@ pub fn save_settings(
 
     settings::save(&app, &settings)?;
     if let Ok(mut guard) = state.inner().0.lock() {
-        *guard = settings;
+        *guard = settings.clone();
     }
+    app.emit("settings-updated", &settings).ok();
     Ok(())
 }
 

@@ -44,3 +44,12 @@ export async function toggleDashboardTop(): Promise<void> {
 export async function hideDashboard(): Promise<void> {
   await invoke("hide_dashboard");
 }
+
+/** Reagiert auf Einstellungsänderungen (aus einem anderen Fenster gespeichert). */
+export async function onSettingsUpdated(
+  callback: (settings: AppSettings) => void,
+): Promise<UnlistenFn> {
+  return await listen<AppSettings>("settings-updated", (event) =>
+    callback(event.payload),
+  );
+}

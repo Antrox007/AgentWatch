@@ -74,6 +74,8 @@ export interface AppSettings {
   islandEnabled: boolean;
   islandMonitor: string | null;
   autoUpdateCheck: boolean;
+  islandShowEvents: boolean;
+  islandShowRateLimits: boolean;
 }
 
 /** Ein Monitor zur Auswahl der Pill-Position. */
@@ -97,4 +99,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   islandEnabled: true,
   islandMonitor: null,
   autoUpdateCheck: true,
+  islandShowEvents: true,
+  islandShowRateLimits: false,
 };

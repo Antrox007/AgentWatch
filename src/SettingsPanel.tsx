@@ -14,6 +14,7 @@ type ToggleKey = keyof Pick<
   | "showCost"
   | "autostart"
   | "autoUpdateCheck"
+  | "islandShowEvents"
 >;
 
 const NOTIFY_TOGGLES: { key: ToggleKey; label: string }[] = [
@@ -89,7 +90,12 @@ export default function SettingsPanel({
       </div>
 
       <div className="settings-section">
-        <div className="settings-section-title">Benachrichtigungen</div>
+        <div className="settings-section-title">Windows-Benachrichtigungen (Toast)</div>
+        <div className="settings-note">
+          Diese Meldungen erscheinen als Windows-Popups rechts unten — unabhängig
+          von der Pill. Standardmäßig aus, da die Pill den Status bereits visuell
+          anzeigt.
+        </div>
         {NOTIFY_TOGGLES.map((t) => (
           <ToggleRow
             key={t.key}
@@ -143,10 +149,23 @@ export default function SettingsPanel({
             </select>
           </label>
         )}
+        <ToggleRow
+          label="Ereignisse in der Pill aufklappen (fertig / wartet)"
+          checked={settings.islandShowEvents}
+          onToggle={() => toggle("islandShowEvents")}
+        />
+        <ToggleRow
+          label="Rate-Limits dauerhaft in der Pill anzeigen (5h / 7d)"
+          checked={settings.islandShowRateLimits}
+          onToggle={() =>
+            onChange({ ...settings, islandShowRateLimits: !settings.islandShowRateLimits })
+          }
+        />
         <div className="settings-note">
           Zeigt oben mittig eine gerundete Pill mit dem Live-Status aller
-          Sessions (ein Punkt je Session, plus Zähler). Klick auf die Pill öffnet
-          das Hauptfenster.
+          Sessions (ein Punkt je Session). Bei aktiviertem Aufklappen erscheint
+          kurz ein Texthinweis, wenn eine Session fertig wird oder auf Eingabe
+          wartet. Klick auf die Pill öffnet das Hauptfenster.
         </div>
       </div>
 

@@ -1108,6 +1108,29 @@ body {
   color: var(--text-faint);
 }
 
+.island-rate-limits {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+  padding-left: 7px;
+  border-left: 1px solid rgba(255,255,255,0.12);
+}
+
+.island-rl {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.07);
+}
+
+.island-rl.island-rl-ok   { color: #4ade80; }
+.island-rl.island-rl-warn { color: #fb923c; }
+.island-rl.island-rl-crit { color: #f87171; }
+
 /* Aufmerksamkeits-Animationen der Pill (statt Toast-Benachrichtigungen).
    Dank des transparenten Bleed-Rands (--bleed) gibt es jetzt einen ECHTEN
    aeusseren Glow zusaetzlich zum inneren Schein — deutlich edler als nur inset.
